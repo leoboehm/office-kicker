@@ -28,7 +28,8 @@ def get_motion_timedout():
     if timestamp is None:
         return True
     # last motion activity was longer than 5min ago
-    delta = timestamp - datetime.now()
+    delta = datetime.now() - timestamp
+    print(delta.total_seconds())
     if delta.total_seconds() > 300:
         return True
     # recent motion activity detected
