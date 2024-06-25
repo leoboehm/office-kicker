@@ -2,8 +2,10 @@ from flask import Flask, jsonify, render_template_string, render_template
 from datetime import datetime
 
 app = Flask(__name__)
+
 timestamp = None
 
+# render ui template based on motion activity
 @app.route("/")
 def index():
     if get_motion_timedout():
@@ -11,26 +13,23 @@ def index():
     else:
         return render_template("actionMode.html")
 
+# set last motion timestamp
 @app.route('/motion', methods=['GET'])
 def set_motion_timestamp():
     global timestamp
     timestamp = datetime.now()
     return jsonify({"message": "Timestamp set", "timestamp": timestamp}), 200
 
-@app.route('/get_motion', methods=['GET'])
-def get_motion_timestamp():
-    global timestamp
-    if timestamp is None:
-        return render_template_string('<h1>No motion detected</h1>')
-    else:
-        return render_template_string('<h1>Motion detected!</h1>')
 
-
+# check for recent motion activity
 def get_motion_timedout():
     global timestamp
+    # no motion activity detected
     if timestamp is None:
         return True
+    # last motion activity was longer than 5min ago
     delta = timestamp - datetime.now()
     if delta.total_seconds() > 300:
         return True
+    # recent motion activity detected
     return False
