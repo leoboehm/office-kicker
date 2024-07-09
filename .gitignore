@@ -1,2 +1,6 @@
 # pycache
 __pycache__
+
+# local env files
+.env.local
+.flaskenv.local
