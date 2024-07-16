@@ -4,3 +4,6 @@ __pycache__
 # local env files
 .env.local
 .flaskenv.local
+
+# raspi script
+raspi.py
