@@ -24,7 +24,7 @@ def detect_motion():
             # turn off LED
             GPIO.output(LED_PIN, GPIO.LOW)
 
-        time.sleep(1)
+        time.sleep(30)
 
 if __name__ == "__main__":
     try:
