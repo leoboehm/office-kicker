@@ -6,4 +6,4 @@ __pycache__
 .flaskenv.local
 
 # raspi script
-raspi.py
+#raspi.py
