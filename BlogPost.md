@@ -1,13 +1,14 @@
-### Building a Smart Foosball Table with Raspberry Pi
+# Building a Smart Foosball Table with Raspberry Pi
 
 Maybe you have a foosball table in your office or club and want to know if someone is currently playing without having to leave your seat, or you're just searching for your next fun DIY-project - anyways, I got you.
-In this beginners tutorial, I'll walk you through the steps of creating a smart foosball table using a Raspberry Pi 3, a motion sensor, LED strips, and a Flask server. In the end, the system will detect whether the table is in use and display the occupancy status on a web page. As an additional fun feature, LED strips will light up when the table is occupied.
+In this beginners tutorial, I'll walk you through the steps of creating a smart foosball table using a Raspberry Pi 3, a motion sensor and a Flask server. In the end, the system will detect whether the table is in use and display the occupancy status on a web page. As an additional fun feature, LED strips will light up when the table is occupied.
 
-Enough explanation, let's dive into the process!
+Enough explanation, let's dive into it!
 
 Note: I used Codesphere as an external server to host the flask app, it is totally possible to host the app on any chosen platform or even directly on your microcontroller.
 
-#### Materials Needed
+
+## Materials Needed
 
 1. Raspberry Pi 3 (with Raspbian installed)
 2. PIR motion sensor
@@ -17,7 +18,7 @@ Note: I used Codesphere as an external server to host the flask app, it is total
 
 Note: Your Raspberry Pi needs an internet connection to send the motion data to the server. I simply connected it via WLAN, otherwise you would need to ensure connection via a LAN cable which is rather inconvenient for the foosball table setup.
 
-#### Step 1: Setting Up the Hardware
+## Step 1: Setting Up the Hardware
 
 **1. Connect the Motion Sensor to the Raspberry Pi**
 
@@ -25,36 +26,26 @@ The PIR motion sensor typically has three pins: VCC, GND, and OUT.
 
 - Connect the VCC pin to the 5V pin on the Raspberry Pi.
 - Connect the GND pin to a GND pin on the Raspberry Pi.
-- Connect the OUT pin to GPIO pin 17 on the Raspberry Pi (or any other GPIO pin of your choice).
+- Connect the OUT pin to GPIO pin 17 (= pin 11 on the Raspberry Pi) or any other GPIO pin of your choice.
 
 **2. Connect the LED Strips**
 
 - Connect the positive terminal of the LED strip to a 5V power supply.
 - Connect the ground terminal of the LED strip to a GND pin on the Raspberry Pi.
-- Connect the data input of the LED strip to GPIO pin 18 on the Raspberry Pi (or any other GPIO pin of your choice).
+- Connect the data input of the LED strip to GPIO pin 18 (= pin 12 on the Raspberry Pi) or any other GPIO pin of your choice.
 
-#### Step 2: Setting Up the Software on the Raspberry Pi
+## Step 2: Writing the Python Script for the Raspberry Pi
 
-**1. Update and Upgrade the Raspberry Pi**
+**Before starting to code: Make sure the Raspberry Pi is updated and has the GPIO and requests libraries installed**
 
 ```sh
 sudo apt-get update
 sudo apt-get upgrade
-```
 
-**2. Install GPIO Library**
-
-```sh
 sudo apt-get install python3-rpi.gpio
-```
 
-**3. Install the Requests Library**
-
-```sh
 sudo apt-get install python3-requests
 ```
-
-#### Step 3: Writing the Python Script for the Raspberry Pi
 
 Create a Python script to handle motion detection, LED control, and communication with the external Flask server. Let's simply call it `kicker_pi.py`.
 
@@ -82,24 +73,18 @@ Now, we can start implementing the function handling the incoming signal from th
 ```python
 def detect_motion():
     while True:
-        
         # check for motion
         if GPIO.input(PIR_PIN):
             try:
-                # set motion state to true
-                requests.post(SERVER_URL, json={'motion': True})
+                # send motion state
+                requests.get(SERVER_URL)
             except Exception as e:
                 print(f"Failed to send data: {e}")
-
         else:
-            try:
-                # set motion state to false
-                requests.post(SERVER_URL, json={'motion': False}) 
-            except Exception as e:
-                print(f"Failed to send data: {e}")
+            pass
         
-        # update every 10 secs
-        time.sleep(10)
+        # update every second
+        time.sleep(1)
 ```
 
 Since we also want to turn on LED strips when motion is detected, we expand our detect_motion function to send output signals to the connected LEDs. This is simply done by either sending HIGH (on) or LOW (off) to the GPIO pin.
@@ -107,28 +92,21 @@ Since we also want to turn on LED strips when motion is detected, we expand our 
 ```python
 def detect_motion():
     while True:
-        
         # check for motion
         if GPIO.input(PIR_PIN):
             # turn on LED
             GPIO.output(LED_PIN, GPIO.HIGH)
             try:
-                # set motion state to true
-                requests.post(SERVER_URL, json={'motion': True})
+                # send motion state
+                requests.get(SERVER_URL)
             except Exception as e:
                 print(f"Failed to send data: {e}")
-
         else:
             # turn off LED
             GPIO.output(LED_PIN, GPIO.LOW)
-            try:
-                # set motion state to false
-                requests.post(SERVER_URL, json={'motion': False}) 
-            except Exception as e:
-                print(f"Failed to send data: {e}")
         
-        # update every 10 secs
-        time.sleep(10)
+        # update every second
+        time.sleep(1)
 ```
 
 Last but not least, we add the following lines to execute the function at the bottom of our file:
@@ -145,10 +123,10 @@ if __name__ == "__main__":
 Run the Raspberry Pi script with the following command:
 
 ```sh
-python3 foosball_pi.py
+python3 kicker_pi.py
 ```
 
-#### Step 4: Creating the Flask Application
+## Step 3: Creating the Flask Application
 
 **1. Install Flask**
 
@@ -158,34 +136,45 @@ pip install flask
 
 **2. Create the Flask server**
 
-Create a new file called `server.py`. Since we want to use the request and render_template functions, we need to import those separately.
+Create a new file called `server.py`, import the necessary functions and libraries, and create a Flask app.
 
 ```python
-from flask import Flask, request, render_template
+from flask import Flask, jsonify, render_template
+from datetime import datetime
 
 app = Flask(__name__)
 ```
 
-Next, we need to provide an endpoint for the Raspberry Pi to send the motion data to, as well as a function to return the motion state.
+Next, we need to provide an endpoint for the Raspberry Pi to call on motion activity. This function should then set the current timestamp which we will use later on to check for recent activity.
 
 ```python
-motion_state = {'motion': false}
+timestamp = None
 
-# return current motion state
+# set last motion timestamp
 @app.route('/motion', methods=['GET'])
-def get_motion():
-    return jsonify(motion_state)
+def set_motion_timestamp():
+    global timestamp
+    timestamp = datetime.now()
+    return jsonify({"message": "Timestamp set", "timestamp": timestamp}), 200
 
-# raspi endpoint to set the current motion state
-@app.route('/motion', methods=['POST'])
-def update_motion():
-    global motion_state
-    data = request.json
-    if 'motion' in data:
-        motion_state['motion'] = data['motion']
-        return jsonify(success=True), 200
-    else:
-        return jsonify(success=False, error="Invalid data"), 400
+```
+
+Now, we need a function to calculate the difference between the current timestamp and the last motion timestamp. I chose 2 minutes time difference, so if there was no activity for 2 minutes, the function will return false.
+
+```python
+# check for recent motion activity
+def get_motion_timedout():
+    global timestamp
+    # no motion activity detected
+    if timestamp is None:
+        return True
+    # last motion activity was longer than 5min ago
+    delta = timestamp - datetime.now()
+    delta = datetime.now() - timestamp
+    if delta.total_seconds() > 120:
+        return True
+    # recent motion activity detected
+    return False
 ```
 
 Since we want to render different templates based on the current motion state, our index function needs to look like this:
@@ -194,7 +183,7 @@ Since we want to render different templates based on the current motion state, o
 # render template based on motion state
 @app.route("/")
 def index():
-    if get_motion() == True:
+    if get_motion_timedout() == True:
         return render_template("occupied.html")
     else:
         return render_template("unoccupied.html")
@@ -208,7 +197,7 @@ if __name__ == "__main__":
     app.run(host='0.0.0.0', port=3000)
 ```
 
-**3. Creating the HTML Templates**
+**3. Create the HTML Templates**
 
 At the same root as your server.py file, create a directory called `templates` and add two HTML files: `occupied.html` and `unoccupied.html`. It is important that those files (or any template files) are placed inside this directory, otherwise Flask will not be able to find them.
 The following are very basic examples of how those files might look, displaying the current occupancy state in a very simple heading. Feel free to further customise and enhance the HTML code to your liking.
@@ -241,7 +230,8 @@ The following are very basic examples of how those files might look, displaying 
 </html>
 ```
 
-**4. Set the Flask environment variables
+**4. Set the Flask environment variables**
+
 To get our Flask application to run, we need to specify environment variables. We need to set at least the `FLASK_APP` variable, to tell Flask which file to run. It needs to have the same name as the file containing your flask code, in our case `server`. Since I don't want to reset them on every server restart, I created an `.env` file:
 
 ```env
@@ -273,20 +263,20 @@ or directly via flask:
 flask run
 ```
 
-#### Step 5: Hosting on Codesphere
+## Step 4 (optional): Hosting on Codesphere
 1. Sign in with your Codesphere account or create an account.
 2. Create a new workspace: Chose the repository you ant to deploy by connecting to either BitBucket, GitHub or GitLab. Select your preferred deployment mode and a payment plan based on the capacities you need.
 3. Once the repository is set up in your workspace, make sure to install Flask and other software requirements as previously mentioned.
 4. You should now be able to run your Flask server via the workspace's terminal.
 5. Click "Open deployment" to navigate to your website. This is also where you find the server url needed in the Raspberry Pi script.
 
-#### Step 6: Testing the Setup
+## Step 5: Finishing and testing the Setup
 
 - Place the motion sensor in a position where it can detect movement near the foosball table.
 - When motion is detected, the LED strips should light up, and the web page should display "The foosball table is occupied!"
 - When no motion is detected, the LED strips should turn off, and the web page should display "The foosball table is unoccupied!"
 
-#### Conclusion
+## Conclusion
 
 Congratulations! You've successfully built a smart foosball table using a Raspberry Pi, a motion sensor, LED strips, and a Flask server. This project provides a beginners entrypoint to the practical application of integrating hardware with web technologies.
 
