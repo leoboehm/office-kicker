@@ -16,25 +16,18 @@ SERVER_URL = 'https://58457-3000.4.codesphere.com/motion'
 
 def detect_motion():
     while True:
-        
         # check for motion
         if GPIO.input(PIR_PIN):
             # turn on LED
             GPIO.output(LED_PIN, GPIO.HIGH)
             try:
-                # set motion state to true
-                requests.post(SERVER_URL, json={'motion': True})
+                # send motion state
+                requests.get(SERVER_URL)
             except Exception as e:
                 print(f"Failed to send data: {e}")
-
         else:
             # turn off LED
             GPIO.output(LED_PIN, GPIO.LOW)
-            try:
-                # set motion state to false
-                requests.post(SERVER_URL, json={'motion': False}) 
-            except Exception as e:
-                print(f"Failed to send data: {e}")
         
         # update every second
         time.sleep(1)
