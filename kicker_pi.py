@@ -36,8 +36,8 @@ def detect_motion():
             except Exception as e:
                 print(f"Failed to send data: {e}")
         
-        # update every 10 secs
-        time.sleep(10)
+        # update every second
+        time.sleep(1)
 
 
 if __name__ == "__main__":
