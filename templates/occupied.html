@@ -10,6 +10,11 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 
+    <!-- refresh automatically every minute -->
+    <script type="text/javascript">
+        setInterval('window.location.reload()', 60000);
+    </script>
+
     <style>
         body {
             font: 20px Montserrat, sans-serif;
@@ -31,9 +36,9 @@
 
 <body>
     <div class="container text-center">
-        <h1 class="margin">Activity detected!!!</h1>
-        <img src="{{url_for('static', filename='kicker.jpg')}}" class="img-responsive img-circle margin" style="display:inline" alt="Kicker" width="500" height="500">
-        <h2>Go play!</h2>
+        <h1 class="margin">Seems like people are playing!</h1>
+        <img src="{{url_for('static', filename='kickerActive.jpg')}}" class="img-responsive img-circle margin" style="display:inline" alt="Kicker" width="500" height="500">
+        <h2>Team up!</h2>
     </div>
 </body>
 </html>
