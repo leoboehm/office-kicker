@@ -3,8 +3,8 @@ import time
 import requests
 
 # GPIO setup
-PIR_PIN = 17
-LED_PIN = 18
+PIR_PIN = 11
+LED_PIN = 12
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(PIR_PIN, GPIO.IN)
